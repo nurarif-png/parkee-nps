@@ -304,6 +304,7 @@ body{padding-bottom:32px}
 
 <!-- ROW 4: Comments + NPS per Agent -->
 <div class="g31">
+  <div style="display:flex;flex-direction:column;gap:18px">
   <div class="card">
     <div class="card-hd">
       <div class="card-title"><span>💬</span> Komentar Terbaru</div>
@@ -315,6 +316,15 @@ body{padding-bottom:32px}
       </select>
     </div>
     <div class="feed" id="commentFeed"></div>
+  </div>
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-title"><span>🧭</span> Detractor per Produk</div>
+      <div style="font-size:.72rem;color:var(--g5)" id="detProdNote"></div>
+    </div>
+    <div class="bar-list" id="detractorBars"></div>
+    <div style="font-size:.68rem;color:var(--g5);margin-top:10px;line-height:1.5">Klasifikasi otomatis dari teks komentar (khusus kategori Detractors). Satu komentar dihitung ke satu kategori, dipilih dari kata kunci paling spesifik.</div>
+  </div>
   </div>
   <div class="card" style="display:flex;flex-direction:column">
     <div class="card-hd"><div class="card-title"><span>📊</span> NPS per Agent</div></div>
@@ -797,7 +807,7 @@ function applyF(){
   curPage=1;
   const fc=document.getElementById('fCount');
   if(fc)fc.textContent=filteredData.length<allData.length?filteredData.length+' hasil':'';
-  updateKPI();updateCharts();renderTable();renderFeed();
+  updateKPI();updateCharts();renderTable();renderFeed();renderDetractorProducts();
 }
 
 function resetF(){
@@ -994,6 +1004,40 @@ function renderFeed(){
       <div class="feed-txt">${r.comment}</div>
       <div class="feed-agent">by ${r.agent||'-'} · ${'⭐'.repeat(Math.min(+r.rating||0,5))}</div>
     </div>`).join(''):'<div style="color:var(--g3);text-align:center;padding:20px;font-size:.8rem">Tidak ada komentar</div>';
+}
+
+// ── DETRACTOR PER PRODUK ──────────────────────────
+const DET_RULES=[
+ ['Produk Bluecharge (EV)',/bluecharge|blue charge|charg|kwh|voltron|spklu|\bev\b|baterai|batre|isi daya/i],
+ ['Produk Wuzz',/wuzz/i],
+ ['Membership & Approval',/member|approv|perpanjang|aktivasi|kartu/i],
+ ['Refund & Pembayaran',/refund|pengembalian|\bdana\b|bayar|pembayaran|payment|tagihan|saldo/i],
+ ['Operational issue',/petugas|staff|staf\b|pengelola|frontliner|security|satpam|kantor parkir|mesin|printer|struk|tiket|gate\b|palang|lokasi|lapangan|mall\b|internet/i],
+ ['Aplikasi & Sistem',/aplikasi|\bapp\b|sistem|system|er+or|bug|lelet|otp|login|\bui\b|flow|sinkron|down\b/i],
+ ['Tarif & Promo',/tarif|harga|mahal|biaya|promo/i],
+ ['Layanan CS & Resolusi',/\bcs\b|agent|respon|response|balas|jawab|solusi|solution|selesai|tindak ?lanjut|follow ?up|lambat|lama\b|lemot|slow|gubris|tutup|closed|informasi|informatif|jelas|sopan|template|pelayanan|bantu|useless|\bbad\b|jelek|buruk|horrible|stupid|tolol|kapok|berguna|guna\b/i]
+];
+const DET_COLORS={'Produk Bluecharge (EV)':'var(--blue)','Produk Wuzz':'var(--purple)','Membership & Approval':'var(--gold)','Refund & Pembayaran':'#e8863a','Operational issue':'var(--red)','Aplikasi & Sistem':'#3ab0bf','Tarif & Promo':'#8abf3a','Layanan CS & Resolusi':'var(--gl)','Tidak spesifik':'var(--g3)'};
+function detProductOf(txt){
+  const t=(txt||'').toLowerCase();
+  for(const pair of DET_RULES){ if(pair[1].test(t)) return pair[0]; }
+  return 'Tidak spesifik';
+}
+function renderDetractorProducts(){
+  const el=document.getElementById('detractorBars'); if(!el) return;
+  const det=filteredData.filter(r=>r.category==='Detractors');
+  const map={};
+  det.forEach(r=>{const k=detProductOf(r.comment); map[k]=(map[k]||0)+1;});
+  const rows=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(...rows.map(r=>r[1]),1);
+  el.innerHTML=rows.length?rows.map(([k,c])=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/mx)*100}%;background:${DET_COLORS[k]||'var(--g4)'}"></div></div>
+      <span class="bar-num">${c}</span>
+    </div>`).join(''):'<div style="color:var(--g3);font-size:.8rem;text-align:center;padding:16px">Tidak ada komentar detractor pada filter ini</div>';
+  const note=document.getElementById('detProdNote');
+  if(note)note.textContent=det.length+' komentar detractor · '+rows.length+' kategori';
 }
 
 // ── TABLE ─────────────────────────────────────────
