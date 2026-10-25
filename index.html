@@ -163,6 +163,18 @@ body{padding-bottom:32px}
 ::-webkit-scrollbar-track{background:var(--g1)}
 ::-webkit-scrollbar-thumb{background:var(--gp);border-radius:99px}
 
+.card-note{font-size:.68rem;color:var(--g5);margin-top:12px;line-height:1.55}
+.prom-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.prom-sub{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--g5);margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--g1)}
+.prom-row{display:grid;grid-template-columns:minmax(0,196px) minmax(0,1fr) 82px;align-items:center;gap:12px}
+.prom-lbl{font-size:.78rem;color:var(--g7);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.prom-track{height:10px;background:var(--g1);border-radius:99px;overflow:hidden}
+.prom-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.prom-num{font-size:.72rem;font-family:'DM Mono',monospace;color:var(--g5);text-align:right;white-space:nowrap}
+.prom-num b{color:var(--g7);font-weight:700}
+.prom-empty{color:var(--g3);font-size:.8rem;text-align:center;padding:18px}
+@media(max-width:900px){.prom-grid{grid-template-columns:1fr;gap:22px}.prom-row{grid-template-columns:minmax(0,132px) minmax(0,1fr) 72px;gap:9px}}
+
 @media(max-width:980px){.g2,.g3,.g31{grid-template-columns:1fr}.main{padding:14px 16px}.hdr{padding:0 16px}}
 @media(max-width:580px){.kpi-grid{grid-template-columns:1fr 1fr}}
 </style>
@@ -302,9 +314,8 @@ body{padding-bottom:32px}
   <div class="trend-wrap"><div class="trend-bars" id="trendBars"></div></div>
 </div>
 
-<!-- ROW 4: Comments + NPS per Agent -->
+<!-- ROW 4: Komentar Terbaru + Detractor per Produk -->
 <div class="g31">
-  <div style="display:flex;flex-direction:column;gap:18px">
   <div class="card">
     <div class="card-hd">
       <div class="card-title"><span>💬</span> Komentar Terbaru</div>
@@ -323,23 +334,33 @@ body{padding-bottom:32px}
       <div style="font-size:.72rem;color:var(--g5)" id="detProdNote"></div>
     </div>
     <div class="bar-list" id="detractorBars"></div>
-    <div style="font-size:.68rem;color:var(--g5);margin-top:10px;line-height:1.5">Klasifikasi otomatis dari teks komentar (khusus kategori Detractors). Satu komentar dihitung ke satu kategori, dipilih dari kata kunci paling spesifik.</div>
+    <div class="card-note">Klasifikasi otomatis dari teks komentar (khusus Detractors). Satu komentar dihitung ke satu kategori, dipilih dari kata kunci paling spesifik.</div>
   </div>
+</div>
+
+<!-- ROW 5: Promoter per Alasan (full width, 2 kolom internal) -->
+<div class="card full">
+  <div class="card-hd">
+    <div class="card-title"><span>🚀</span> Promoter per Alasan</div>
+    <div style="font-size:.72rem;color:var(--g5)" id="promNote"></div>
   </div>
-  <div class="card" style="display:flex;flex-direction:column">
-    <div class="card-hd">
-      <div class="card-title"><span>🚀</span> Promoter per Alasan</div>
-      <div style="font-size:.72rem;color:var(--g5)" id="promNote"></div>
+  <div class="prom-grid">
+    <div>
+      <div class="prom-sub">Alasan user puas &amp; mau merekomendasikan</div>
+      <div class="bar-list" id="promoterBars"></div>
     </div>
-    <div class="bar-list" id="promoterBars"></div>
-    <div style="font-size:.72rem;color:var(--g5);margin:12px 0 4px;font-weight:600">Touchpoint yang disebut</div>
-    <div class="bar-list" id="promoterCatBars"></div>
-    <div style="font-size:.68rem;color:var(--g5);margin-top:10px;line-height:1.5">Klasifikasi otomatis dari teks komentar (khusus Promoters). Alasan = sebab user puas &amp; mau merekomendasikan Parkee. Touchpoint = produk/layanan yang disebut di komentar.</div>
+    <div>
+      <div class="prom-sub">Touchpoint yang disebut</div>
+      <div class="bar-list" id="promoterCatBars"></div>
+    </div>
   </div>
-  <div class="card" style="display:flex;flex-direction:column">
-    <div class="card-hd"><div class="card-title"><span>📊</span> NPS per Agent</div></div>
-    <div class="bar-list" id="agentNpsBars"></div>
-  </div>
+  <div class="card-note">Klasifikasi otomatis dari teks komentar (khusus Promoters). Alasan = sebab user puas &amp; mau merekomendasikan Parkee. Touchpoint = produk/layanan yang disebut di komentar. Satu komentar dihitung ke satu alasan dan satu touchpoint.</div>
+</div>
+
+<!-- ROW 6: NPS per Agent -->
+<div class="card full">
+  <div class="card-hd"><div class="card-title"><span>📊</span> NPS per Agent</div></div>
+  <div class="bar-list" id="agentNpsBars"></div>
 </div>
 
 <!-- DATA TABLE -->
@@ -1103,17 +1124,18 @@ function promClassify(txt){
   }
   return [cat,rea];
 }
-function promBars(list,elId,colorMap){
+function promBars(list,elId,colorMap,denom){
   const el=document.getElementById(elId); if(!el) return 0;
   const map={}; list.forEach(k=>{map[k]=(map[k]||0)+1;});
   const rows=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const tot=denom||list.length||1;
   const mx=Math.max(...rows.map(r=>r[1]),1);
   el.innerHTML=rows.length?rows.map(([k,c])=>`
-    <div class="bar-row">
-      <div class="bar-lbl">${k}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${(c/mx)*100}%;background:${colorMap[k]||'var(--g4)'}"></div></div>
-      <span class="bar-num">${c}</span>
-    </div>`).join(''):'<div style="color:var(--g3);font-size:.8rem;text-align:center;padding:16px">Tidak ada komentar promotor pada filter ini</div>';
+    <div class="prom-row">
+      <div class="prom-lbl" title="${k}">${k}</div>
+      <div class="prom-track"><div class="prom-fill" style="width:${(c/mx)*100}%;background:${colorMap[k]||'var(--g4)'}"></div></div>
+      <div class="prom-num"><b>${c}</b> · ${Math.round(c/tot*100)}%</div>
+    </div>`).join(''):'<div class="prom-empty">Tidak ada komentar promotor pada filter ini</div>';
   return rows.length;
 }
 function renderPromoterReasons(){
@@ -1121,8 +1143,8 @@ function renderPromoterReasons(){
   const cls=prom.map(r=>promClassify(r.comment));
   const reasons=cls.map(c=>c[1]).filter(x=>x!=='Tanpa Alasan Spesifik');
   const cats=cls.map(c=>c[0]);
-  promBars(reasons,'promoterBars',PROM_COLORS);
-  const nc=promBars(cats,'promoterCatBars',PROM_CAT_COLORS);
+  promBars(reasons,'promoterBars',PROM_COLORS,prom.length);
+  const nc=promBars(cats,'promoterCatBars',PROM_CAT_COLORS,prom.length);
   const note=document.getElementById('promNote');
   if(note) note.textContent=prom.length+' promotor · '+reasons.length+' sebut alasan ('+(prom.length?Math.round(reasons.length/prom.length*100):0)+'%)';
 }
